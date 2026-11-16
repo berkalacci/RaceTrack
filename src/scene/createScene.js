@@ -22,81 +22,44 @@ import {
 } from './track.js';
 import { addWeatherEffects } from './weather.js';
 
+const DAY_PROFILE = {
+  background: 0x87ceeb,
+  fogColor: 0xb0d8f0,
+  fogNear: 80,
+  fogFar: 350,
+  hemiSky: 0xdceeff,
+  hemiGround: 0x7a9462,
+  hemiIntensity: 1.1,
+  sunColor: 0xfff5dc,
+  sunIntensity: 1.8,
+  ambientColor: 0xc8daf0,
+  ambientIntensity: 0.85,
+  exposure: 1.05,
+};
+
 const ATMOSPHERE_CITY = {
-  dark: {
-    background: 0x1b2238,
-    fogColor: 0x222c48,
-    fogNear: 24,
-    fogFar: 130,
-    hemiSky: 0x6d82ab,
-    hemiGround: 0x2a2620,
-    hemiIntensity: 0.72,
-    sunColor: 0xa8bcf5,
-    sunIntensity: 0.5,
-    ambientColor: 0x33405e,
-    ambientIntensity: 0.9,
-    exposure: 1.18,
-  },
-  light: {
-    background: 0xb8cfe6,
-    fogColor: 0xc3d4e6,
-    fogNear: 60,
-    fogFar: 280,
-    hemiSky: 0xd2e2f7,
-    hemiGround: 0x7c7f74,
-    hemiIntensity: 0.95,
-    sunColor: 0xfff2d4,
-    sunIntensity: 1.45,
-    ambientColor: 0xbac9da,
-    ambientIntensity: 0.6,
-    exposure: 0.95,
-  },
+  dark: DAY_PROFILE,
+  light: DAY_PROFILE,
 };
 
 const ATMOSPHERE = {
-  dark: {
-    background: 0x0d1322,
-    fogColor: 0x101829,
-    fogNear: 24,
-    fogFar: 135,
-    hemiSky: 0x4f678a,
-    hemiGround: 0x12160f,
-    hemiIntensity: 0.34,
-    sunColor: 0xaec3ff,
-    sunIntensity: 0.6,
-    ambientColor: 0x1a2234,
-    ambientIntensity: 0.4,
-    exposure: 1.15,
-  },
-  light: {
-    background: 0xa9c8e8,
-    fogColor: 0xc0d6ec,
-    fogNear: 60,
-    fogFar: 300,
-    hemiSky: 0xc8dbf5,
-    hemiGround: 0x71865c,
-    hemiIntensity: 0.9,
-    sunColor: 0xfff3d6,
-    sunIntensity: 1.5,
-    ambientColor: 0xb8c8dc,
-    ambientIntensity: 0.55,
-    exposure: 0.95,
-  },
+  dark: DAY_PROFILE,
+  light: DAY_PROFILE,
 };
 
 function createBaseScene(profiles) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(profiles.light.background);
-  scene.fog = new THREE.Fog(profiles.light.fogColor, profiles.light.fogNear, profiles.light.fogFar);
+  scene.background = new THREE.Color(DAY_PROFILE.background);
+  scene.fog = new THREE.Fog(DAY_PROFILE.fogColor, DAY_PROFILE.fogNear, DAY_PROFILE.fogFar);
 
   const camera = new THREE.PerspectiveCamera(64, window.innerWidth / window.innerHeight, 0.1, 450);
   camera.position.set(-18, 11, -26);
 
-  const hemi = new THREE.HemisphereLight(0xc8dbf5, 0x71865c, 0.9);
+  const hemi = new THREE.HemisphereLight(DAY_PROFILE.hemiSky, DAY_PROFILE.hemiGround, DAY_PROFILE.hemiIntensity);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight(0xfff3d6, 1.5);
-  sun.position.set(22, 30, 16);
+  const sun = new THREE.DirectionalLight(DAY_PROFILE.sunColor, DAY_PROFILE.sunIntensity);
+  sun.position.set(22, 35, 16);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.camera.near = 1;
@@ -110,27 +73,26 @@ function createBaseScene(profiles) {
   scene.add(sun);
   scene.add(sun.target);
 
-  const ambient = new THREE.AmbientLight(0xb8c8dc, 0.55);
+  const ambient = new THREE.AmbientLight(DAY_PROFILE.ambientColor, DAY_PROFILE.ambientIntensity);
   scene.add(ambient);
 
   let dark = false;
-  let exposure = profiles.light.exposure;
+  let exposure = DAY_PROFILE.exposure;
 
   function setDarkMode(next) {
-    dark = !!next;
-    const p = dark ? profiles.dark : profiles.light;
-    scene.background.setHex(p.background);
-    scene.fog.color.setHex(p.fogColor);
-    scene.fog.near = p.fogNear;
-    scene.fog.far = p.fogFar;
-    hemi.color.setHex(p.hemiSky);
-    hemi.groundColor.setHex(p.hemiGround);
-    hemi.intensity = p.hemiIntensity;
-    sun.color.setHex(p.sunColor);
-    sun.intensity = p.sunIntensity;
-    ambient.color.setHex(p.ambientColor);
-    ambient.intensity = p.ambientIntensity;
-    exposure = p.exposure;
+    dark = false;
+    scene.background.setHex(DAY_PROFILE.background);
+    scene.fog.color.setHex(DAY_PROFILE.fogColor);
+    scene.fog.near = DAY_PROFILE.fogNear;
+    scene.fog.far = DAY_PROFILE.fogFar;
+    hemi.color.setHex(DAY_PROFILE.hemiSky);
+    hemi.groundColor.setHex(DAY_PROFILE.hemiGround);
+    hemi.intensity = DAY_PROFILE.hemiIntensity;
+    sun.color.setHex(DAY_PROFILE.sunColor);
+    sun.intensity = DAY_PROFILE.sunIntensity;
+    ambient.color.setHex(DAY_PROFILE.ambientColor);
+    ambient.intensity = DAY_PROFILE.ambientIntensity;
+    exposure = DAY_PROFILE.exposure;
   }
 
   return {
@@ -138,7 +100,7 @@ function createBaseScene(profiles) {
     camera,
     sun,
     setDarkMode,
-    isDarkMode: () => dark,
+    isDarkMode: () => false,
     exposure: () => exposure,
   };
 }
@@ -278,20 +240,17 @@ export async function createScene({ carId = 'sedan', rivalCount = 3, scenario = 
 
   if (freeRoam) {
     const world = await createFreeRoamWorld(base, materials, { carId, rivalCount });
-    let darkFree = false;
-    const setDarkEnvironment = (next) => {
-      darkFree = !!next;
-      base.setDarkMode(darkFree);
-      setMaterialMode(darkFree);
-      world.weather.setDarkMode(darkFree);
+    const setDarkEnvironment = () => {
+      base.setDarkMode(false);
+      setMaterialMode(false);
+      world.weather.setDarkMode(false);
     };
-    setDarkEnvironment(false);
+    setDarkEnvironment();
 
     const freeRoamLights = {
-      setEnabled: (next) => world.streetLights.setEnabled(next),
-      isEnabled: () => world.streetLights.isEnabled(),
+      setEnabled: () => {},
+      isEnabled: () => false,
       update(frameDt, focus) {
-        world.streetLights.update(frameDt, focus);
         world.updateShadowFocus(focus);
       },
     };
@@ -315,7 +274,7 @@ export async function createScene({ carId = 'sedan', rivalCount = 3, scenario = 
       waypointDebugGroup: null,
       streetLightsController: freeRoamLights,
       setDarkEnvironment,
-      isDarkEnvironment: () => darkFree,
+      isDarkEnvironment: () => false,
       exposure: base.exposure,
       updateWeather: world.weather.update,
       dispose() {
@@ -340,25 +299,26 @@ export async function createScene({ carId = 'sedan', rivalCount = 3, scenario = 
 
   const playerEntry = findPlayableCar(carId);
   const start = spawnPose(curve, 0.04);
-const car = await Vehicle.create(
-new THREE.Vector3(start.x, 0, start.z),
-carConfigOverride(playerEntry)
-);
-car.resetTo(start.x, start.z, start.heading);
-scene.add(car.group);
-camera.position.set(start.x - Math.sin(start.heading) * 9, 4, start.z - Math.cos(start.heading) * 9);
-const laneOffsets = [1.5, -1.5, 0.6, -0.6];
-const rivals = await Promise.all(
-RIVAL_CARS.slice(0, rivalCount).map(async (entry, i) => {
-const pose = spawnPose(curve, (0.04 - 0.058 * (i + 1) + 1) % 1, laneOffsets[i % laneOffsets.length]);
-const rival = await Vehicle.create(
-new THREE.Vector3(pose.x, 0, pose.z),
-carConfigOverride(entry, {
-lights: { realtime: false },
-effects: { exhaustParticles: 24 },
-})
-);
-rival.resetTo(pose.x, pose.z, pose.heading);
+  const car = await Vehicle.create(
+    new THREE.Vector3(start.x, 0, start.z),
+    carConfigOverride(playerEntry)
+  );
+  car.resetTo(start.x, start.z, start.heading);
+  scene.add(car.group);
+  camera.position.set(start.x - Math.sin(start.heading) * 9, 4, start.z - Math.cos(start.heading) * 9);
+
+  const laneOffsets = [1.5, -1.5, 0.6, -0.6];
+  const rivals = await Promise.all(
+    RIVAL_CARS.slice(0, rivalCount).map(async (entry, i) => {
+      const pose = spawnPose(curve, (0.04 - 0.058 * (i + 1) + 1) % 1, laneOffsets[i % laneOffsets.length]);
+      const rival = await Vehicle.create(
+        new THREE.Vector3(pose.x, 0, pose.z),
+        carConfigOverride(entry, {
+          lights: { realtime: false },
+          effects: { exhaustParticles: 24 },
+        })
+      );
+      rival.resetTo(pose.x, pose.z, pose.heading);
 rival.pace = entry.pace;
 rival.laneOffset = laneOffsets[i % laneOffsets.length];
 rival.displayName = entry.name;
@@ -368,15 +328,13 @@ return rival;
 );
 const obstacles = await addTrackObstacles(scene, curve, roadWidth);
 const weather = addWeatherEffects(scene, { baseZ: 10 });
-let dark = false;
-function setDarkEnvironment(next) {
-dark = !!next;
-base.setDarkMode(dark);
-setMaterialMode(dark);
-weather.setDarkMode(dark);
-streetLights.setEnabled(dark && streetLights.isEnabled());
+function setDarkEnvironment() {
+base.setDarkMode(false);
+setMaterialMode(false);
+weather.setDarkMode(false);
+streetLights.setEnabled(false);
 }
-setDarkEnvironment(false);
+setDarkEnvironment();
 return {
 scene,
 camera,
@@ -397,7 +355,7 @@ obstacles,
 waypointDebugGroup,
 streetLightsController: streetLights,
 setDarkEnvironment,
-isDarkEnvironment: () => dark,
+isDarkEnvironment: () => false,
 exposure: base.exposure,
 updateWeather: weather.update,
 dispose() {
