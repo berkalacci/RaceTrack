@@ -22,10 +22,7 @@ import {
 } from './track.js';
 import { addWeatherEffects } from './weather.js';
 
-/** Per-scenario sky, fog and light. The city is hazier and warmer than open country. */
 const ATMOSPHERE_CITY = {
-  // A city at night is never as dark as open country: windows, shop fronts and sky
-  // glow lift the ambient floor, and without that the buildings read as black cutouts.
   dark: {
     background: 0x1b2238,
     fogColor: 0x222c48,
@@ -43,8 +40,8 @@ const ATMOSPHERE_CITY = {
   light: {
     background: 0xb8cfe6,
     fogColor: 0xc3d4e6,
-    fogNear: 40,
-    fogFar: 230,
+    fogNear: 60,
+    fogFar: 280,
     hemiSky: 0xd2e2f7,
     hemiGround: 0x7c7f74,
     hemiIntensity: 0.95,
@@ -74,8 +71,8 @@ const ATMOSPHERE = {
   light: {
     background: 0xa9c8e8,
     fogColor: 0xc0d6ec,
-    fogNear: 48,
-    fogFar: 280,
+    fogNear: 60,
+    fogFar: 300,
     hemiSky: 0xc8dbf5,
     hemiGround: 0x71865c,
     hemiIntensity: 0.9,
@@ -89,37 +86,35 @@ const ATMOSPHERE = {
 
 function createBaseScene(profiles) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(profiles.dark.background);
-  scene.fog = new THREE.Fog(profiles.dark.fogColor, profiles.dark.fogNear, profiles.dark.fogFar);
+  scene.background = new THREE.Color(profiles.light.background);
+  scene.fog = new THREE.Fog(profiles.light.fogColor, profiles.light.fogNear, profiles.light.fogFar);
 
-  const camera = new THREE.PerspectiveCamera(64, window.innerWidth / window.innerHeight, 0.1, 400);
+  const camera = new THREE.PerspectiveCamera(64, window.innerWidth / window.innerHeight, 0.1, 450);
   camera.position.set(-18, 11, -26);
 
-  const hemi = new THREE.HemisphereLight(0x4f678a, 0x12160f, 0.34);
+  const hemi = new THREE.HemisphereLight(0xc8dbf5, 0x71865c, 0.9);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight(0xaec3ff, 0.6);
+  const sun = new THREE.DirectionalLight(0xfff3d6, 1.5);
   sun.position.set(22, 30, 16);
   sun.castShadow = true;
-  // Tight frustum + 1024 map: the 2048 map covered 110x110 units at ~19 texels/unit,
-  // which is far more shadow detail than this scene can show.
   sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 130;
-  sun.shadow.camera.left = -46;
-  sun.shadow.camera.right = 46;
-  sun.shadow.camera.top = 46;
-  sun.shadow.camera.bottom = -46;
+  sun.shadow.camera.far = 160;
+  sun.shadow.camera.left = -70;
+  sun.shadow.camera.right = 70;
+  sun.shadow.camera.top = 70;
+  sun.shadow.camera.bottom = -70;
   sun.shadow.bias = -0.0006;
   sun.shadow.normalBias = 0.02;
   scene.add(sun);
   scene.add(sun.target);
 
-  const ambient = new THREE.AmbientLight(0x1a2234, 0.4);
+  const ambient = new THREE.AmbientLight(0xb8c8dc, 0.55);
   scene.add(ambient);
 
   let dark = false;
-  let exposure = profiles.dark.exposure;
+  let exposure = profiles.light.exposure;
 
   function setDarkMode(next) {
     dark = !!next;
@@ -185,13 +180,6 @@ function addRacingLineDebug(scene, waypoints, materials) {
   return group;
 }
 
-/**
- * A closed rectangular route along four of the city's streets.
- *
- * Free roam has no circuit, but the AI rivals, the minimap and the ghost all speak
- * `trackPath`. Handing them a loop that runs down real streets turns the rivals into
- * city traffic for free, instead of writing a second navigation system.
- */
 function buildTrafficLoop(streetEvery, ringCells) {
   const span = ringCells * streetEvery * TILE;
   const corners = [
@@ -218,14 +206,12 @@ function buildTrafficLoop(streetEvery, ringCells) {
   return waypoints;
 }
 
-/** City free roam: the whole grid, no circuit, no lap timing. */
 async function createFreeRoamWorld(base, materials, { carId, rivalCount }) {
   const { scene, camera } = base;
 
   addGroundAndTerrain(scene, materials, { city: true });
   const city = await addCity(scene, null, FREEROAM_LAYOUT);
 
-  // Spawn on a street running north-south, a little out from the centre.
   const spawnCell = city.streetCells
     .filter((cell) => cell.gx % FREEROAM_LAYOUT.streetEvery === 0)
     .sort((a, b) => Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z))[0]
@@ -240,7 +226,6 @@ async function createFreeRoamWorld(base, materials, { carId, rivalCount }) {
   scene.add(car.group);
   camera.position.set(spawnCell.x, 5, spawnCell.z - 10);
 
-  // Traffic drives a loop through the street grid.
   const loopWaypoints = buildTrafficLoop(FREEROAM_LAYOUT.streetEvery, 2);
   const racingPath = createTrackPath(loopWaypoints);
 
@@ -253,7 +238,6 @@ async function createFreeRoamWorld(base, materials, { carId, rivalCount }) {
         carConfigOverride(entry, {
           lights: { realtime: false },
           effects: { exhaustParticles: 24 },
-          // City traffic pootles along; nobody is racing.
           dynamics: { maxSpeed: 11 + i },
         })
       );
@@ -268,7 +252,6 @@ async function createFreeRoamWorld(base, materials, { carId, rivalCount }) {
 
   const weather = addWeatherEffects(scene, { baseZ: 0, area: 140 });
 
-  // The lamp posts are modelled into the road tiles but carry no light of their own.
   const streetLights = createPointLightPool(scene, city.lampPosts, {
     size: 6,
     intensity: 2.4,
@@ -276,10 +259,6 @@ async function createFreeRoamWorld(base, materials, { carId, rivalCount }) {
     range: 60,
   });
 
-  /**
-   * The shadow camera covers ~90 m, the city ~220 m. Rather than blow the shadow map
-   * up to cover everything (and lose all its resolution), the box travels with the car.
-   */
   function updateShadowFocus(focus) {
     base.sun.position.set(focus.x + 26, 44, focus.z + 18);
     base.sun.target.position.set(focus.x, 0, focus.z);
@@ -290,10 +269,6 @@ async function createFreeRoamWorld(base, materials, { carId, rivalCount }) {
   return { city, car, rivals, racingPath, loopWaypoints, weather, streetLights, updateShadowFocus };
 }
 
-/**
- * Builds the whole world. `carId` picks the player's model; rivals come from the
- * catalog and are deliberately *different* models so you can tell them apart.
- */
 export async function createScene({ carId = 'sedan', rivalCount = 3, scenario = 'city' } = {}) {
   const freeRoam = scenario === 'freeroam';
   const isCity = scenario === 'city' || freeRoam;
@@ -303,9 +278,6 @@ export async function createScene({ carId = 'sedan', rivalCount = 3, scenario = 
 
   if (freeRoam) {
     const world = await createFreeRoamWorld(base, materials, { carId, rivalCount });
-    // Free roam opens in daylight: there is no floodlit circuit to drive by, and
-    // sightseeing a city at night with a handful of lamp posts is no fun. `N` still
-    // switches.
     let darkFree = false;
     const setDarkEnvironment = (next) => {
       darkFree = !!next;
@@ -313,9 +285,8 @@ export async function createScene({ carId = 'sedan', rivalCount = 3, scenario = 
       setMaterialMode(darkFree);
       world.weather.setDarkMode(darkFree);
     };
-    setDarkEnvironment(true);
+    setDarkEnvironment(false);
 
-    // One controller object so main.js does not need to know which scenario it is in.
     const freeRoamLights = {
       setEnabled: (next) => world.streetLights.setEnabled(next),
       isEnabled: () => world.streetLights.isEnabled(),
@@ -354,103 +325,84 @@ export async function createScene({ carId = 'sedan', rivalCount = 3, scenario = 
     };
   }
 
-  // ── Static world
-  addGroundAndTerrain(scene, materials, { city: isCity });
+  addGroundAndTerrain(scene, materials, { city: false });
   const curve = createTrackCurve();
   const { roadWidth, finishLine } = addTrackMesh(scene, curve, materials);
   addGuardrails(scene, curve, roadWidth, materials);
   const streetLights = addStreetLights(scene, curve, roadWidth, materials);
 
-  // Two separate paths: the true centre line (lap timing, guardrail corridor) and the
-  // weaving racing line (AI + minimap).
   const centerPath = createTrackPath(sampleCenterline(curve, 128));
+  addBackgroundTrees(scene, materials);
 
-  // The surroundings are the scenario: a Kenney city grid, or the original tree ring.
-  let cityStats = null;
-  if (isCity) {
-    const city = await addCity(scene, centerPath);
-    cityStats = city.stats;
-  } else {
-    addBackgroundTrees(scene, materials);
-  }
   const racingWaypoints = buildRacingLine(curve, 96, roadWidth);
   const racingPath = createTrackPath(racingWaypoints);
   const waypointDebugGroup = addRacingLineDebug(scene, racingWaypoints, materials);
 
-  // ── Player
   const playerEntry = findPlayableCar(carId);
   const start = spawnPose(curve, 0.04);
-  const car = await Vehicle.create(
-    new THREE.Vector3(start.x, 0, start.z),
-    carConfigOverride(playerEntry)
-  );
-  car.resetTo(start.x, start.z, start.heading);
-  scene.add(car.group);
-  camera.position.set(start.x - Math.sin(start.heading) * 9, 4, start.z - Math.cos(start.heading) * 9);
-
-  // ── Rivals: staggered grid slots behind the player, alternating lanes
-  const laneOffsets = [1.5, -1.5, 0.6, -0.6];
-  const rivals = await Promise.all(
-    RIVAL_CARS.slice(0, rivalCount).map(async (entry, i) => {
-      // ~7 m between grid slots: at 0.028 the 4-metre cars overlapped each other.
-      const pose = spawnPose(curve, (0.04 - 0.058 * (i + 1) + 1) % 1, laneOffsets[i % laneOffsets.length]);
-      const rival = await Vehicle.create(
-        new THREE.Vector3(pose.x, 0, pose.z),
-        carConfigOverride(entry, {
-          // Rivals get lamps but no real-time lights — see Vehicle._buildRealtimeLights.
-          lights: { realtime: false },
-          effects: { exhaustParticles: 24 },
-        })
-      );
-      rival.resetTo(pose.x, pose.z, pose.heading);
-      rival.pace = entry.pace;
-      rival.laneOffset = laneOffsets[i % laneOffsets.length];
-      rival.displayName = entry.name;
-      scene.add(rival.group);
-      return rival;
-    })
-  );
-
-  // ── Props & weather
-  const obstacles = await addTrackObstacles(scene, curve, roadWidth);
-  const weather = addWeatherEffects(scene, { baseZ: 10 });
-
-  let dark = true;
-  function setDarkEnvironment(next) {
-    dark = !!next;
-    base.setDarkMode(dark);
-    setMaterialMode(dark);
-    weather.setDarkMode(dark);
-    streetLights.setEnabled(dark && streetLights.isEnabled());
-  }
-  setDarkEnvironment(true);
-
-  return {
-    scene,
-    camera,
-    car,
-    rivals,
-    scenario,
-    freeRoam: false,
-    cityStats,
-    cityCollider: null,
-    curve,
-    centerPath,
-    racingPath,
-    racingWaypoints,
-    roadWidth,
-    finishLine,
-    startPose: start,
-    obstacles,
-    waypointDebugGroup,
-    streetLightsController: streetLights,
-    setDarkEnvironment,
-    isDarkEnvironment: () => dark,
-    exposure: base.exposure,
-    updateWeather: weather.update,
-    dispose() {
-      weather.dispose();
-      disposeMaterials();
-    },
-  };
+const car = await Vehicle.create(
+new THREE.Vector3(start.x, 0, start.z),
+carConfigOverride(playerEntry)
+);
+car.resetTo(start.x, start.z, start.heading);
+scene.add(car.group);
+camera.position.set(start.x - Math.sin(start.heading) * 9, 4, start.z - Math.cos(start.heading) * 9);
+const laneOffsets = [1.5, -1.5, 0.6, -0.6];
+const rivals = await Promise.all(
+RIVAL_CARS.slice(0, rivalCount).map(async (entry, i) => {
+const pose = spawnPose(curve, (0.04 - 0.058 * (i + 1) + 1) % 1, laneOffsets[i % laneOffsets.length]);
+const rival = await Vehicle.create(
+new THREE.Vector3(pose.x, 0, pose.z),
+carConfigOverride(entry, {
+lights: { realtime: false },
+effects: { exhaustParticles: 24 },
+})
+);
+rival.resetTo(pose.x, pose.z, pose.heading);
+rival.pace = entry.pace;
+rival.laneOffset = laneOffsets[i % laneOffsets.length];
+rival.displayName = entry.name;
+scene.add(rival.group);
+return rival;
+})
+);
+const obstacles = await addTrackObstacles(scene, curve, roadWidth);
+const weather = addWeatherEffects(scene, { baseZ: 10 });
+let dark = false;
+function setDarkEnvironment(next) {
+dark = !!next;
+base.setDarkMode(dark);
+setMaterialMode(dark);
+weather.setDarkMode(dark);
+streetLights.setEnabled(dark && streetLights.isEnabled());
+}
+setDarkEnvironment(false);
+return {
+scene,
+camera,
+car,
+rivals,
+scenario,
+freeRoam: false,
+cityStats: null,
+cityCollider: null,
+curve,
+centerPath,
+racingPath,
+racingWaypoints,
+roadWidth,
+finishLine,
+startPose: start,
+obstacles,
+waypointDebugGroup,
+streetLightsController: streetLights,
+setDarkEnvironment,
+isDarkEnvironment: () => dark,
+exposure: base.exposure,
+updateWeather: weather.update,
+dispose() {
+weather.dispose();
+disposeMaterials();
+},
+};
 }
