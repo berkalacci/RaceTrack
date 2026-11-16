@@ -118,7 +118,7 @@ function createBaseScene(profiles) {
   const ambient = new THREE.AmbientLight(0x1a2234, 0.4);
   scene.add(ambient);
 
-  let dark = true;
+  let dark = false;
   let exposure = profiles.dark.exposure;
 
   function setDarkMode(next) {
@@ -313,7 +313,7 @@ export async function createScene({ carId = 'sedan', rivalCount = 3, scenario = 
       setMaterialMode(darkFree);
       world.weather.setDarkMode(darkFree);
     };
-    setDarkEnvironment(false);
+    setDarkEnvironment(true);
 
     // One controller object so main.js does not need to know which scenario it is in.
     const freeRoamLights = {
